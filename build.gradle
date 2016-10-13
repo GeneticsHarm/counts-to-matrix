@@ -1,5 +1,5 @@
 group 'com.harmbrugge.expressionmatrix'
-version '1.0-SNAPSHOT'
+version '1.0'
 
 apply plugin: 'java'
 
@@ -13,6 +13,10 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
     compile group: 'commons-cli', name: 'commons-cli', version: '1.3.1'
+    compile group: 'commons-io', name: 'commons-io', version: '2.5'
+    compile group: 'com.googlecode.matrix-toolkits-java', name: 'mtj', version: '1.0.4'
+
+
 }
 
 jar {

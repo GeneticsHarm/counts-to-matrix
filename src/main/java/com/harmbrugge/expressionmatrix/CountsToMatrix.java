@@ -4,6 +4,8 @@
  */
 package com.harmbrugge.expressionmatrix;
 
+import org.apache.commons.io.FileUtils;
+
 import java.io.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -40,14 +42,9 @@ import java.util.stream.IntStream;
  */
 public class CountsToMatrix {
 
-    private int[][] expressionMatrix;
-    private List<String> rowNames;
-    private String[] columnNames;
-    private int rowCount;
-    private int columnCount;
+    private ExpressionSparseMatrix expressionMatrix;
 
     private Path outputPath;
-
     private File[] countsFiles;
 
     public CountsToMatrix(Path pathToCountFiles, Path outputPath) {
@@ -58,10 +55,7 @@ public class CountsToMatrix {
 
         File countsDir = pathToCountFiles.toFile();
 
-        countsFiles = countsDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".txt"));
-
-        columnNames = new String[countsFiles.length];
-        rowNames = new ArrayList<>();
+        countsFiles = FileUtils.listFiles(countsDir, new String[] {"txt"}, true).toArray(new File[0]);
     }
 
     public CountsToMatrix(Path pathToCountFiles) {
@@ -70,12 +64,10 @@ public class CountsToMatrix {
 
     public void createMatrix() throws IOException {
 
-        if (countsFiles != null && countsFiles.length > 0) {
-            rowCount = extractGeneIds(countsFiles[0]);
-            columnCount = countsFiles.length;
-        }
+        List<String> geneNames = extractGeneNames(countsFiles[0]);
+        List<String> sampleNames = extractSampleNames();
 
-        expressionMatrix = new int[rowCount][columnCount];
+        expressionMatrix = new ExpressionSparseMatrix(geneNames, sampleNames);
 
         readFiles();
         writeMatrix();
@@ -87,7 +79,6 @@ public class CountsToMatrix {
         IntStream.range(0, countsFiles.length).parallel().forEach(columnIndex -> {
 
             File countFile = countsFiles[columnIndex];
-            columnNames[columnIndex] = countFile.getName();
 
             try (BufferedReader br = new BufferedReader(new FileReader(countFile))) {
                 br.readLine();
@@ -101,53 +92,35 @@ public class CountsToMatrix {
                     String[] splitLine = line.split("\t");
                     int expressionCount = Integer.parseInt(splitLine[6]);
 
-                    expressionMatrix[rowIndex][columnIndex] = expressionCount;
+                    if (expressionCount != 0) expressionMatrix.set(rowIndex, columnIndex, expressionCount);
 
                     rowIndex++;
                     line = br.readLine();
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                //todo: Log it probably...
             }
+
         });
     }
 
     private void writeMatrix() throws IOException {
-
-        outputPath.toFile().mkdirs();
-
-        File outputFile = new File(outputPath + "/expression-matrix.tsv");
-
-        if (!outputFile.exists()) outputFile.createNewFile();
-
-        FileWriter fileWriter = new FileWriter(outputFile.getAbsoluteFile());
-        BufferedWriter bw = new BufferedWriter(fileWriter);
-        bw.write("gene-id");
-
-        for (String geneId : columnNames) {
-            bw.write("\t");
-            bw.write(geneId);
-        }
-
-        bw.write("\n");
-
-        for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-
-            bw.write(rowNames.get(rowIndex));
-
-            for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
-                bw.write("\t");
-                bw.write(String.valueOf(expressionMatrix[rowIndex][columnIndex]));
-            }
-
-            bw.write("\n");
-        }
-
-        bw.close();
+        SparseMtxWriter sparseWriter = new SparseMtxWriter(outputPath, expressionMatrix);
+        sparseWriter.write();
     }
 
-    private int extractGeneIds(File file) throws IOException {
-        int idCount = 0;
+    private List<String> extractSampleNames() {
+        List<String> sampleNames = new ArrayList<>();
+
+        for (File sampleFile :countsFiles) {
+            sampleNames.add(sampleFile.getName());
+        }
+
+        return sampleNames;
+    }
+
+    private List<String> extractGeneNames(File file) throws IOException {
+        List<String> geneNames = new ArrayList<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             br.readLine();
@@ -158,15 +131,14 @@ public class CountsToMatrix {
 
                 String[] splitLine = line.split("\t");
                 if (splitLine.length > 0) {
-                    String geneId = splitLine[0];
-                    idCount++;
-                    rowNames.add(geneId);
+                    String geneName = splitLine[0];
+                    geneNames.add(geneName);
                 }
                 line = br.readLine();
 
             }
         }
 
-        return idCount;
+        return geneNames;
     }
 }
