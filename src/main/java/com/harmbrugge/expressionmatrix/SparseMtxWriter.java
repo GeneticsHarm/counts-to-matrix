@@ -21,6 +21,7 @@ import java.util.Iterator;
 public class SparseMtxWriter implements MatrixWriter {
 
     private static final String FILENAME = "matrix.mtx";
+    private static final String MTX_HEADER = "%%MatrixMarket matrix coordinate real general";
 
     private File outputFile;
     private final ExpressionSparseMatrix matrix;
@@ -40,9 +41,9 @@ public class SparseMtxWriter implements MatrixWriter {
         FileWriter fileWriter = new FileWriter(outputFile.getAbsoluteFile());
         BufferedWriter bw = new BufferedWriter(fileWriter);
 
-        bw.write("%%MatrixMarket matrix coordinate real general\n");
-        bw.write("%\n");
-        // The header line
+        bw.write(MTX_HEADER + "\n");
+
+        // After the header, there's a line with totals
         bw.write(matrix.numRows() + " " + matrix.numColumns() + " " + matrix.getEntriesCount() + "\n");
 
         Iterator<MatrixEntry> iterator = matrix.iterator();

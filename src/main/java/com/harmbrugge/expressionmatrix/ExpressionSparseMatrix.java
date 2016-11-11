@@ -9,7 +9,7 @@ import no.uib.cipr.matrix.sparse.LinkedSparseMatrix;
 import java.util.List;
 
 /**
- * A linked sparse matrix that keeps track of the total amount of entries, and .
+ * A linked sparse matrix that keeps track of the total amount of entries.
  *
  * Doesn't account for resets, so if a row and column is already present while setting it keeps counting.
  *
